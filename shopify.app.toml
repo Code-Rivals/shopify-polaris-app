@@ -3,7 +3,7 @@
 client_id = "eaed4a60ad91e063b19eedbb9be6595b"
 name = "new-darren-app"
 handle = "new-darren-app"
-application_url = "https://processor-geographical-phenomenon-calling.trycloudflare.com"
+application_url = "https://historical-russell-susan-output.trycloudflare.com"
 embedded = true
 
 [build]
@@ -27,9 +27,9 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://processor-geographical-phenomenon-calling.trycloudflare.com/auth/callback",
-  "https://processor-geographical-phenomenon-calling.trycloudflare.com/auth/shopify/callback",
-  "https://processor-geographical-phenomenon-calling.trycloudflare.com/api/auth/callback"
+  "https://historical-russell-susan-output.trycloudflare.com/auth/callback",
+  "https://historical-russell-susan-output.trycloudflare.com/auth/shopify/callback",
+  "https://historical-russell-susan-output.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]
