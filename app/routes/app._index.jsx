@@ -90,7 +90,7 @@ export default function Dashboard() {
 
   return (
     <Page>
-      <TitleBar title="AOV Booster Dashboard" />
+      <TitleBar title="Profit Pilot Booster Dashboard" />
 
       <Layout>
         <Layout.Section>

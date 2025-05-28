@@ -15,7 +15,6 @@ import {
   TextField,
   Select,
   FormLayout,
-  Switch,
   Toast,
   Frame
 } from "@shopify/polaris";
