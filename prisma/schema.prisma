@@ -34,18 +34,19 @@ model Store {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   bundles     Bundle[]
   upsells     Upsell[]
   analytics   Analytics[]
   abTests     ABTest[]
+  aiRecommendations AiRecommendation[]
 }
 
 model Bundle {
   id          String   @id @default(cuid())
   storeId     String
   store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  
+
   name        String
   description String?
   mainProductId String
@@ -54,15 +55,15 @@ model Bundle {
   priority    Int      @default(0)
   isActive    Boolean  @default(true)
   isAiGenerated Boolean @default(true)
-  
+
   // Analytics
   impressions Int @default(0)
   conversions Int @default(0)
   revenue     Float @default(0)
-  
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   @@index([storeId, mainProductId])
   @@index([storeId, isActive])
 }
@@ -71,7 +72,7 @@ model Upsell {
   id          String   @id @default(cuid())
   storeId     String
   store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  
+
   name        String
   triggerProductId String?  // Product that triggers this upsell
   upsellProductId  String   // Product being upsold
@@ -80,20 +81,20 @@ model Upsell {
   priority    Int     @default(0)
   isActive    Boolean @default(true)
   isAiGenerated Boolean @default(true)
-  
+
   // Conditions
   minCartValue Float?
   maxCartValue Float?
   conditions   Json?   // Additional targeting conditions
-  
+
   // Analytics
   impressions Int @default(0)
   conversions Int @default(0)
   revenue     Float @default(0)
-  
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   @@index([storeId, triggerProductId])
   @@index([storeId, triggerType, isActive])
 }
@@ -102,27 +103,27 @@ model Analytics {
   id        String   @id @default(cuid())
   storeId   String
   store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  
+
   date      DateTime @default(now())
-  
+
   // Revenue metrics
   totalRevenue      Float @default(0)
   bundleRevenue     Float @default(0)
   upsellRevenue     Float @default(0)
   baselineRevenue   Float @default(0)
-  
+
   // Conversion metrics
   totalOrders       Int @default(0)
   ordersWithBundles Int @default(0)
   ordersWithUpsells Int @default(0)
-  
+
   // AOV metrics
   averageOrderValue Float @default(0)
   bundleAOV         Float @default(0)
   upsellAOV         Float @default(0)
-  
+
   createdAt DateTime @default(now())
-  
+
   @@unique([storeId, date])
   @@index([storeId, date])
 }
@@ -131,32 +132,42 @@ model ABTest {
   id          String   @id @default(cuid())
   storeId     String
   store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  
+
   name        String
   type        String   // "bundle", "upsell"
   status      String   @default("running") // running, completed, paused
-  
+
   // Test configuration
   controlId   String   // ID of control bundle/upsell
   variantId   String   // ID of variant bundle/upsell
   trafficSplit Float   @default(0.5) // 0.5 = 50/50 split
-  
+
   // Results
   controlImpressions   Int @default(0)
   controlConversions   Int @default(0)
   controlRevenue       Float @default(0)
-  
+
   variantImpressions   Int @default(0)
   variantConversions   Int @default(0)
   variantRevenue       Float @default(0)
-  
+
   confidenceLevel Float?
   winner         String? // "control", "variant", or null
-  
+
   startedAt   DateTime @default(now())
   endedAt     DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   @@index([storeId, status])
+}
+
+model AiRecommendation {
+  id            String   @id @default(cuid())
+  storeId       String
+  recommendations Json
+  generatedAt   DateTime @default(now())
+  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
