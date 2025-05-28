@@ -1,328 +1,197 @@
-import { useEffect } from "react";
-import { useFetcher } from "@remix-run/react";
+import { json } from "@remix-run/node";
+import { useLoaderData, useFetcher } from "@remix-run/react";
 import {
   Page,
   Layout,
-  Text,
   Card,
-  Button,
+  Text,
   BlockStack,
-  Box,
-  List,
-  Link,
   InlineStack,
+  Button,
+  Badge,
+  DataTable,
+  Divider,
+  Box,
+  Icon,
+  ProgressBar,
 } from "@shopify/polaris";
-import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
+import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
+import { getStoreAnalytics, generateAIRecommendations } from "../services/analytics.server";
 
 export const loader = async ({ request }) => {
-  await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
 
-  return null;
+  // Get store analytics for the dashboard
+  const analytics = await getStoreAnalytics(session.shop);
+
+  // Get recent bundles and upsells
+  const recentActivity = await getRecentActivity(session.shop);
+
+  return json({
+    analytics,
+    recentActivity,
+    shop: session.shop
+  });
 };
 
 export const action = async ({ request }) => {
-  const { admin } = await authenticate.admin(request);
-  const color = ["Red", "Orange", "Yellow", "Green"][
-    Math.floor(Math.random() * 4)
-  ];
-  const response = await admin.graphql(
-    `#graphql
-      mutation populateProduct($product: ProductCreateInput!) {
-        productCreate(product: $product) {
-          product {
-            id
-            title
-            handle
-            status
-            variants(first: 10) {
-              edges {
-                node {
-                  id
-                  price
-                  barcode
-                  createdAt
-                }
-              }
-            }
-          }
-        }
-      }`,
-    {
-      variables: {
-        product: {
-          title: `${color} Snowboard`,
-        },
-      },
-    },
-  );
-  const responseJson = await response.json();
-  const product = responseJson.data.productCreate.product;
-  const variantId = product.variants.edges[0].node.id;
-  const variantResponse = await admin.graphql(
-    `#graphql
-    mutation shopifyRemixTemplateUpdateVariant($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
-      productVariantsBulkUpdate(productId: $productId, variants: $variants) {
-        productVariants {
-          id
-          price
-          barcode
-          createdAt
-        }
-      }
-    }`,
-    {
-      variables: {
-        productId: product.id,
-        variants: [{ id: variantId, price: "100.00" }],
-      },
-    },
-  );
-  const variantResponseJson = await variantResponse.json();
+  const { admin, session } = await authenticate.admin(request);
+  const formData = await request.formData();
+  const action = formData.get("action");
 
-  return {
-    product: responseJson.data.productCreate.product,
-    variant: variantResponseJson.data.productVariantsBulkUpdate.productVariants,
-  };
+  if (action === "generate_ai_recommendations") {
+    await generateAIRecommendations(session.shop, admin);
+    return json({ success: true });
+  }
+
+  return json({ success: false });
 };
 
-export default function Index() {
+export default function Dashboard() {
+  const { analytics, recentActivity } = useLoaderData();
   const fetcher = useFetcher();
-  const shopify = useAppBridge();
-  const isLoading =
-    ["loading", "submitting"].includes(fetcher.state) &&
-    fetcher.formMethod === "POST";
-  const productId = fetcher.data?.product?.id.replace(
-    "gid://shopify/Product/",
-    "",
-  );
 
-  useEffect(() => {
-    if (productId) {
-      shopify.toast.show("Product created");
-    }
-  }, [productId, shopify]);
-  const generateProduct = () => fetcher.submit({}, { method: "POST" });
+  const isGenerating = fetcher.formData?.get("action") === "generate_ai_recommendations";
+
+  const generateRecommendations = () => {
+    fetcher.submit(
+      { action: "generate_ai_recommendations" },
+      { method: "post" }
+    );
+  };
 
   return (
     <Page>
-      <TitleBar title="Remix app template">
-        <button variant="primary" onClick={generateProduct}>
-          Generate a product
-        </button>
+      <TitleBar title="AOV Booster Dashboard">
+        <Button 
+          variant="primary" 
+          onClick={generateRecommendations}
+          loading={isGenerating}
+        >
+          Generate AI Recommendations
+        </Button>
       </TitleBar>
-      <BlockStack gap="500">
-        <Layout>
-          <Layout.Section>
+
+      <Layout>
+        <Layout.Section variant="oneThird">
+          <BlockStack gap="400">
+            {/* Revenue Overview */}
             <Card>
-              <BlockStack gap="500">
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingMd">
-                    Congrats on creating a new Shopify app 🎉
+              <BlockStack gap="200">
+                <Text as="h2" variant="headingMd">Revenue Overview</Text>
+                <Divider />
+                <InlineStack align="space-between">
+                  <Text variant="bodyMd">Total Revenue (30d)</Text>
+                  <Text variant="headingMd" as="p">
+                    ${analytics.totalRevenue?.toFixed(2) || '0.00'}
                   </Text>
-                  <Text variant="bodyMd" as="p">
-                    This embedded app template uses{" "}
-                    <Link
-                      url="https://shopify.dev/docs/apps/tools/app-bridge"
-                      target="_blank"
-                      removeUnderline
-                    >
-                      App Bridge
-                    </Link>{" "}
-                    interface examples like an{" "}
-                    <Link url="/app/additional" removeUnderline>
-                      additional page in the app nav
-                    </Link>
-                    , as well as an{" "}
-                    <Link
-                      url="https://shopify.dev/docs/api/admin-graphql"
-                      target="_blank"
-                      removeUnderline
-                    >
-                      Admin GraphQL
-                    </Link>{" "}
-                    mutation demo, to provide a starting point for app
-                    development.
-                  </Text>
-                </BlockStack>
-                <BlockStack gap="200">
-                  <Text as="h3" variant="headingMd">
-                    Get started with products
-                  </Text>
-                  <Text as="p" variant="bodyMd">
-                    Generate a product with GraphQL and get the JSON output for
-                    that product. Learn more about the{" "}
-                    <Link
-                      url="https://shopify.dev/docs/api/admin-graphql/latest/mutations/productCreate"
-                      target="_blank"
-                      removeUnderline
-                    >
-                      productCreate
-                    </Link>{" "}
-                    mutation in our API references.
-                  </Text>
-                </BlockStack>
-                <InlineStack gap="300">
-                  <Button loading={isLoading} onClick={generateProduct}>
-                    Generate a product
-                  </Button>
-                  {fetcher.data?.product && (
-                    <Button
-                      url={`shopify:admin/products/${productId}`}
-                      target="_blank"
-                      variant="plain"
-                    >
-                      View product
-                    </Button>
-                  )}
                 </InlineStack>
-                {fetcher.data?.product && (
-                  <>
-                    <Text as="h3" variant="headingMd">
-                      {" "}
-                      productCreate mutation
-                    </Text>
-                    <Box
-                      padding="400"
-                      background="bg-surface-active"
-                      borderWidth="025"
-                      borderRadius="200"
-                      borderColor="border"
-                      overflowX="scroll"
-                    >
-                      <pre style={{ margin: 0 }}>
-                        <code>
-                          {JSON.stringify(fetcher.data.product, null, 2)}
-                        </code>
-                      </pre>
-                    </Box>
-                    <Text as="h3" variant="headingMd">
-                      {" "}
-                      productVariantsBulkUpdate mutation
-                    </Text>
-                    <Box
-                      padding="400"
-                      background="bg-surface-active"
-                      borderWidth="025"
-                      borderRadius="200"
-                      borderColor="border"
-                      overflowX="scroll"
-                    >
-                      <pre style={{ margin: 0 }}>
-                        <code>
-                          {JSON.stringify(fetcher.data.variant, null, 2)}
-                        </code>
-                      </pre>
-                    </Box>
-                  </>
-                )}
+                <InlineStack align="space-between">
+                  <Text variant="bodyMd">Bundle Revenue</Text>
+                  <Text variant="headingMd" as="p" tone="success">
+                    ${analytics.bundleRevenue?.toFixed(2) || '0.00'}
+                  </Text>
+                </InlineStack>
+                <InlineStack align="space-between">
+                  <Text variant="bodyMd">Upsell Revenue</Text>
+                  <Text variant="headingMd" as="p" tone="success">
+                    ${analytics.upsellRevenue?.toFixed(2) || '0.00'}
+                  </Text>
+                </InlineStack>
+                <Box paddingBlockStart="200">
+                  <ProgressBar 
+                    progress={((analytics.bundleRevenue + analytics.upsellRevenue) / analytics.totalRevenue * 100) || 0}
+                    size="small"
+                  />
+                  <Text variant="captionMd" tone="subdued">
+                    {(((analytics.bundleRevenue + analytics.upsellRevenue) / analytics.totalRevenue * 100) || 0).toFixed(1)}% from AI recommendations
+                  </Text>
+                </Box>
               </BlockStack>
             </Card>
-          </Layout.Section>
-          <Layout.Section variant="oneThird">
-            <BlockStack gap="500">
-              <Card>
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingMd">
-                    App template specs
+
+            {/* AOV Metrics */}
+            <Card>
+              <BlockStack gap="200">
+                <Text as="h2" variant="headingMd">Average Order Value</Text>
+                <Divider />
+                <InlineStack align="space-between">
+                  <Text variant="bodyMd">Overall AOV</Text>
+                  <Text variant="headingMd" as="p">
+                    ${analytics.averageOrderValue?.toFixed(2) || '0.00'}
                   </Text>
-                  <BlockStack gap="200">
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        Framework
-                      </Text>
-                      <Link
-                        url="https://remix.run"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        Remix
-                      </Link>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        Database
-                      </Text>
-                      <Link
-                        url="https://www.prisma.io/"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        Prisma
-                      </Link>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        Interface
-                      </Text>
-                      <span>
-                        <Link
-                          url="https://polaris.shopify.com"
-                          target="_blank"
-                          removeUnderline
-                        >
-                          Polaris
-                        </Link>
-                        {", "}
-                        <Link
-                          url="https://shopify.dev/docs/apps/tools/app-bridge"
-                          target="_blank"
-                          removeUnderline
-                        >
-                          App Bridge
-                        </Link>
-                      </span>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        API
-                      </Text>
-                      <Link
-                        url="https://shopify.dev/docs/api/admin-graphql"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        GraphQL API
-                      </Link>
-                    </InlineStack>
-                  </BlockStack>
-                </BlockStack>
-              </Card>
-              <Card>
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingMd">
-                    Next steps
+                </InlineStack>
+                <InlineStack align="space-between">
+                  <Text variant="bodyMd">With Bundles</Text>
+                  <Text variant="headingMd" as="p" tone="success">
+                    ${analytics.bundleAOV?.toFixed(2) || '0.00'}
                   </Text>
-                  <List>
-                    <List.Item>
-                      Build an{" "}
-                      <Link
-                        url="https://shopify.dev/docs/apps/getting-started/build-app-example"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        {" "}
-                        example app
-                      </Link>{" "}
-                      to get started
-                    </List.Item>
-                    <List.Item>
-                      Explore Shopify’s API with{" "}
-                      <Link
-                        url="https://shopify.dev/docs/apps/tools/graphiql-admin-api"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        GraphiQL
-                      </Link>
-                    </List.Item>
-                  </List>
-                </BlockStack>
-              </Card>
-            </BlockStack>
-          </Layout.Section>
-        </Layout>
-      </BlockStack>
+                </InlineStack>
+                <InlineStack align="space-between">
+                  <Text variant="bodyMd">With Upsells</Text>
+                  <Text variant="headingMd" as="p" tone="success">
+                    ${analytics.upsellAOV?.toFixed(2) || '0.00'}
+                  </Text>
+                </InlineStack>
+              </BlockStack>
+            </Card>
+          </BlockStack>
+        </Layout.Section>
+
+        <Layout.Section variant="twoThirds">
+          <BlockStack gap="400">
+            {/* Active Bundles */}
+            <Card>
+              <BlockStack gap="300">
+                <InlineStack align="space-between">
+                  <Text as="h2" variant="headingMd">Active Bundles</Text>
+                  <Button url="/app/bundles">View All</Button>
+                </InlineStack>
+                <DataTable
+                  columnContentTypes={['text', 'text', 'numeric', 'numeric']}
+                  headings={['Bundle', 'Type', 'Conversions', 'Revenue']}
+                  rows={recentActivity.bundles?.map(bundle => [
+                    bundle.name,
+                    bundle.isAiGenerated ? 'AI Generated' : 'Manual',
+                    bundle.conversions,
+                    `$${bundle.revenue.toFixed(2)}`
+                  ]) || []}
+                />
+              </BlockStack>
+            </Card>
+
+            {/* Active Upsells */}
+            <Card>
+              <BlockStack gap="300">
+                <InlineStack align="space-between">
+                  <Text as="h2" variant="headingMd">Active Upsells</Text>
+                  <Button url="/app/upsells">View All</Button>
+                </InlineStack>
+                <DataTable
+                  columnContentTypes={['text', 'text', 'numeric', 'numeric']}
+                  headings={['Upsell', 'Trigger', 'Conversions', 'Revenue']}
+                  rows={recentActivity.upsells?.map(upsell => [
+                    upsell.name,
+                    upsell.triggerType,
+                    upsell.conversions,
+                    `$${upsell.revenue.toFixed(2)}`
+                  ]) || []}
+                />
+              </BlockStack>
+            </Card>
+          </BlockStack>
+        </Layout.Section>
+      </Layout>
     </Page>
   );
+}
+
+async function getRecentActivity(shop) {
+  // This would typically query your database
+  // For now, returning mock data structure
+  return {
+    bundles: [],
+    upsells: []
+  };
 }
