@@ -1,0 +1,154 @@
+Purpose:
+This Shopify app helps merchants increase their Average Order Value (AOV) by using AI to automatically create and optimize upsell offers and smart product bundles. The app analyzes store data and customer behavior to recommend bundles and upsells that are likely to convert.
+
+
+
+⸻
+
+
+
+💡 Core Features:
+1. AI-Driven Product Bundling:
+Automatically suggests bundles based on purchase patterns, product affinity, and seasonality.
+2. Smart Upsell Offers (Post-Purchase + In-Cart):
+Offers are optimized using machine learning to show the right product at the right time.
+3. Real-Time A/B Testing:
+Tests different offers to identify which bundles/upsells generate the highest conversion or revenue lift.
+4. Analytics Dashboard:
+Merchants can see how much additional revenue the app is generating and track performance over time.
+5. Custom Rules (Optional):
+Merchants can set manual upsells and bundles if they want more control.
+
+
+
+⸻
+
+
+
+💰 Revenue Model (How It Makes Money):
+
+
+
+We will offer a tiered subscription pricing model, based on the merchant’s Shopify plan or store revenue size. Here’s a suggested structure:
+
+
+
+✅ Free Trial (7-14 days):
+
+
+
+Let merchants try the app with full features to experience the revenue lift.
+
+
+
+💵 Pricing Tiers:
+• Starter (For new/small stores): $9/month
+• Limited to X upsells/bundles
+• Growth (Mid-sized stores): $29/month
+• Unlimited bundles, advanced AI features
+• Pro (High-volume stores): $79/month
+• Includes advanced A/B testing, full analytics, priority support
+
+What is this app?
+
+
+
+It’s a Shopify app that uses AI to automatically recommend upsells and create smart product bundles—with the goal of helping merchants make more money without needing to do extra work.
+
+
+
+⸻
+
+
+
+👤 Who is it for?
+
+
+
+It’s for Shopify store owners who:
+• Want to increase their revenue from every customer
+• Don’t have the time or expertise to manually create product bundles and upsells
+• Are tired of generic apps that require lots of configuration or don’t convert well
+
+
+
+Examples of users:
+• A clothing brand that wants to bundle matching accessories with outfits
+• A pet supplies store that wants to upsell treats when someone buys dog food
+• A beauty store that wants to suggest a “complete skincare set” when a serum is added to cart
+
+
+
+⸻
+
+
+
+🚀 What does it actually do?
+
+
+
+Once the app is installed, it does the heavy lifting:
+1. Scans store data — Looks at customer behavior, purchase history, and product metadata.
+2. Creates “Smart Bundles” — Groups products that tend to be bought together or complement each other.
+3. Sets Up “Smart Upsells” — Adds in-cart and post-purchase suggestions for other relevant products.
+4. Optimizes offers using AI — Tracks what works and makes adjustments automatically over time.
+5. Shows performance metrics — Store owners can see how much extra revenue is being generated.
+
+
+
+👉 All this happens with minimal setup. It’s designed to be “install-and-go.”
+
+
+
+⸻
+
+
+
+💡 What problem does it solve?
+
+
+
+Shopify merchants constantly struggle to:
+• Increase average order value (AOV)
+• Know which products to upsell or bundle
+• Set up upsells manually or test different versions
+
+
+
+This app automates those tasks using AI—helping merchants make more money with less effort.
+
+
+
+⸻
+
+
+
+💰 How does the app make money?
+
+
+
+We charge merchants a monthly subscription, based on how big their store is.
+
+
+
+Example Pricing:
+• $9/month – For small stores
+• $29/month – For medium stores (unlimited upsells, basic AI)
+• $79/month – For large stores (advanced A/B testing, premium AI, analytics)
+
+
+
+We might also offer a free trial (7-14 days) and a performance-based pricing option for big merchants (like 1% of upsell revenue generated).
+
+
+
+⸻
+
+
+
+✅ Key Benefits for Merchants
+• More sales without more traffic
+• Easy to use (just install and go)
+• AI learns and improves performance automatically
+• Makes bundling and upselling a no-brainer
+• Works for nearly any product niche
