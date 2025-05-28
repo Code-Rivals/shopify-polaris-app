@@ -3,7 +3,7 @@
 client_id = "eaed4a60ad91e063b19eedbb9be6595b"
 name = "new-darren-app"
 handle = "new-darren-app"
-application_url = "https://historical-russell-susan-output.trycloudflare.com"
+application_url = "https://scripting-backed-designing-failures.trycloudflare.com"
 embedded = true
 
 [build]
@@ -27,9 +27,9 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://historical-russell-susan-output.trycloudflare.com/auth/callback",
-  "https://historical-russell-susan-output.trycloudflare.com/auth/shopify/callback",
-  "https://historical-russell-susan-output.trycloudflare.com/api/auth/callback"
+  "https://scripting-backed-designing-failures.trycloudflare.com/auth/callback",
+  "https://scripting-backed-designing-failures.trycloudflare.com/auth/shopify/callback",
+  "https://scripting-backed-designing-failures.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]
