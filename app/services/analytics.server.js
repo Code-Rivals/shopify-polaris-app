@@ -1,5 +1,10 @@
 
 import prisma from "../db.server";
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export async function getStoreAnalytics(shopDomain) {
   try {
@@ -151,101 +156,172 @@ export async function generateAIRecommendations(shopDomain, admin) {
 }
 
 async function generateBundleRecommendations(products, orders) {
-  // AI logic to analyze product affinity and create bundles
-  const productPairs = new Map();
-  
-  // Analyze orders to find products frequently bought together
-  orders.forEach(order => {
-    const productIds = order.lineItems.edges.map(edge => edge.node.variant.product.id);
-    
-    // Create pairs of products bought together
-    for (let i = 0; i < productIds.length; i++) {
-      for (let j = i + 1; j < productIds.length; j++) {
-        const pair = [productIds[i], productIds[j]].sort().join('|');
-        productPairs.set(pair, (productPairs.get(pair) || 0) + 1);
-      }
-    }
-  });
+  try {
+    // Prepare product data for OpenAI analysis
+    const productData = products.map(p => ({
+      id: p.id.replace('gid://shopify/Product/', ''),
+      title: p.title,
+      type: p.productType,
+      vendor: p.vendor,
+      tags: p.tags,
+      price: parseFloat(p.variants.edges[0]?.node.price || 0)
+    }));
 
-  // Find top product pairs and create bundle recommendations
-  const topPairs = Array.from(productPairs.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10);
+    // Prepare order data for purchase pattern analysis
+    const orderPatterns = orders.map(order => ({
+      products: order.lineItems.edges.map(edge => ({
+        id: edge.node.variant.product.id.replace('gid://shopify/Product/', ''),
+        title: edge.node.variant.product.title,
+        quantity: edge.node.quantity
+      })),
+      totalAmount: parseFloat(order.totalPriceSet.shopMoney.amount)
+    }));
 
-  const bundleRecommendations = [];
-  
-  topPairs.forEach(([pair, frequency]) => {
-    const [productId1, productId2] = pair.split('|');
-    const product1 = products.find(p => p.id === productId1);
-    const product2 = products.find(p => p.id === productId2);
-    
-    if (product1 && product2 && frequency >= 2) {
-      bundleRecommendations.push({
-        name: `${product1.title} + ${product2.title} Bundle`,
-        description: `AI-recommended bundle based on purchase patterns`,
-        mainProductId: productId1.replace('gid://shopify/Product/', ''),
-        bundledProducts: [
-          { id: productId1.replace('gid://shopify/Product/', ''), quantity: 1 },
-          { id: productId2.replace('gid://shopify/Product/', ''), quantity: 1 }
-        ],
-        discount: 10, // 10% bundle discount
-        priority: frequency,
-        isAiGenerated: true
+    const prompt = `
+You are an expert e-commerce analyst. Analyze the following store data and create intelligent product bundles that will increase Average Order Value (AOV).
+
+PRODUCTS:
+${JSON.stringify(productData, null, 2)}
+
+PURCHASE PATTERNS:
+${JSON.stringify(orderPatterns, null, 2)}
+
+Based on this data, create 5-8 strategic product bundles. Consider:
+1. Products frequently bought together
+2. Complementary items (accessories with main products)
+3. Different price points to maximize AOV
+4. Seasonal trends and product categories
+5. Cross-category opportunities
+
+For each bundle, provide:
+- name: Compelling bundle name
+- description: Why this bundle makes sense
+- products: Array of product IDs to include
+- discount: Recommended discount percentage (5-15%)
+- reasoning: Brief explanation of the bundle logic
+
+Return valid JSON array format only.
+`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+      max_tokens: 2000
+    });
+
+    const aiResponse = completion.choices[0].message.content;
+    let bundleRecommendations = [];
+
+    try {
+      const parsedBundles = JSON.parse(aiResponse);
+      
+      bundleRecommendations = parsedBundles.map((bundle, index) => {
+        const mainProductId = bundle.products[0];
+        const bundledProducts = bundle.products.map(id => ({ id, quantity: 1 }));
+        
+        return {
+          name: bundle.name,
+          description: bundle.description,
+          mainProductId: mainProductId,
+          bundledProducts: bundledProducts,
+          discount: bundle.discount || 10,
+          priority: 100 - index, // Higher priority for first recommendations
+          isAiGenerated: true,
+          aiReasoning: bundle.reasoning
+        };
       });
+    } catch (parseError) {
+      console.error('Error parsing OpenAI bundle response:', parseError);
+      // Fallback to basic analysis if OpenAI fails
+      return await generateBasicBundleRecommendations(products, orders);
     }
-  });
 
-  return bundleRecommendations;
+    return bundleRecommendations;
+  } catch (error) {
+    console.error('OpenAI API error for bundles:', error);
+    // Fallback to basic analysis
+    return await generateBasicBundleRecommendations(products, orders);
+  }
 }
 
 async function generateUpsellRecommendations(products, orders) {
-  // AI logic to find upsell opportunities
-  const upsellRecommendations = [];
-  
-  // Analyze product categories and price points for upsells
-  const productsByType = products.reduce((acc, product) => {
-    const type = product.productType || 'General';
-    if (!acc[type]) acc[type] = [];
-    acc[type].push(product);
-    return acc;
-  }, {});
+  try {
+    // Prepare data for OpenAI analysis
+    const productData = products.map(p => ({
+      id: p.id.replace('gid://shopify/Product/', ''),
+      title: p.title,
+      type: p.productType,
+      vendor: p.vendor,
+      tags: p.tags,
+      price: parseFloat(p.variants.edges[0]?.node.price || 0)
+    }));
 
-  // Create upsells within product categories
-  Object.entries(productsByType).forEach(([type, typeProducts]) => {
-    if (typeProducts.length < 2) return;
-    
-    // Sort by price to create upgrade upsells
-    const sortedProducts = typeProducts.sort((a, b) => {
-      const priceA = parseFloat(a.variants.edges[0]?.node.price || 0);
-      const priceB = parseFloat(b.variants.edges[0]?.node.price || 0);
-      return priceA - priceB;
+    const customerBehavior = orders.map(order => ({
+      products: order.lineItems.edges.map(edge => edge.node.variant.product.title),
+      value: parseFloat(order.totalPriceSet.shopMoney.amount)
+    }));
+
+    const prompt = `
+You are an expert e-commerce conversion specialist. Create strategic upsell recommendations to maximize Average Order Value.
+
+PRODUCTS:
+${JSON.stringify(productData, null, 2)}
+
+CUSTOMER BEHAVIOR:
+${JSON.stringify(customerBehavior, null, 2)}
+
+Create 8-12 intelligent upsell strategies. Consider:
+1. Natural upgrade paths (basic → premium versions)
+2. Add-on opportunities (accessories, warranties, services)
+3. Cross-sell complementary products
+4. Price-point optimization for maximum conversion
+5. Customer behavior patterns
+
+For each upsell, provide:
+- name: Compelling upsell offer name
+- triggerProductId: Product ID that triggers this upsell
+- upsellProductId: Product ID being upsold
+- triggerType: "cart", "product_page", or "post_purchase"
+- discount: Recommended discount (0-10%)
+- reasoning: Why this upsell will convert
+
+Return valid JSON array format only.
+`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+      max_tokens: 2000
     });
 
-    // Create upsells from lower to higher priced items
-    for (let i = 0; i < sortedProducts.length - 1; i++) {
-      const triggerProduct = sortedProducts[i];
-      const upsellProduct = sortedProducts[i + 1];
-      
-      const triggerPrice = parseFloat(triggerProduct.variants.edges[0]?.node.price || 0);
-      const upsellPrice = parseFloat(upsellProduct.variants.edges[0]?.node.price || 0);
-      
-      // Only create upsell if price difference is reasonable (20-200%)
-      const priceDifference = (upsellPrice - triggerPrice) / triggerPrice;
-      if (priceDifference >= 0.2 && priceDifference <= 2.0) {
-        upsellRecommendations.push({
-          name: `Upgrade to ${upsellProduct.title}`,
-          triggerProductId: triggerProduct.id.replace('gid://shopify/Product/', ''),
-          upsellProductId: upsellProduct.id.replace('gid://shopify/Product/', ''),
-          triggerType: 'cart',
-          discount: 5, // 5% upgrade discount
-          priority: Math.floor(priceDifference * 100),
-          isAiGenerated: true
-        });
-      }
-    }
-  });
+    const aiResponse = completion.choices[0].message.content;
+    let upsellRecommendations = [];
 
-  return upsellRecommendations.slice(0, 20); // Limit to top 20 recommendations
+    try {
+      const parsedUpsells = JSON.parse(aiResponse);
+      
+      upsellRecommendations = parsedUpsells.map((upsell, index) => ({
+        name: upsell.name,
+        triggerProductId: upsell.triggerProductId,
+        upsellProductId: upsell.upsellProductId,
+        triggerType: upsell.triggerType || 'cart',
+        discount: upsell.discount || 5,
+        priority: 100 - index,
+        isAiGenerated: true,
+        aiReasoning: upsell.reasoning
+      }));
+    } catch (parseError) {
+      console.error('Error parsing OpenAI upsell response:', parseError);
+      return await generateBasicUpsellRecommendations(products, orders);
+    }
+
+    return upsellRecommendations;
+  } catch (error) {
+    console.error('OpenAI API error for upsells:', error);
+    return await generateBasicUpsellRecommendations(products, orders);
+  }
 }
 
 async function saveBundleRecommendations(storeId, recommendations) {
@@ -306,4 +382,92 @@ export async function updateAnalytics(shopDomain, analyticsData) {
       ...analyticsData
     }
   });
+}
+// Fallback functions for when OpenAI is unavailable
+async function generateBasicBundleRecommendations(products, orders) {
+  const productPairs = new Map();
+  
+  orders.forEach(order => {
+    const productIds = order.lineItems.edges.map(edge => edge.node.variant.product.id);
+    
+    for (let i = 0; i < productIds.length; i++) {
+      for (let j = i + 1; j < productIds.length; j++) {
+        const pair = [productIds[i], productIds[j]].sort().join('|');
+        productPairs.set(pair, (productPairs.get(pair) || 0) + 1);
+      }
+    }
+  });
+
+  const topPairs = Array.from(productPairs.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  const bundleRecommendations = [];
+  
+  topPairs.forEach(([pair, frequency]) => {
+    const [productId1, productId2] = pair.split('|');
+    const product1 = products.find(p => p.id === productId1);
+    const product2 = products.find(p => p.id === productId2);
+    
+    if (product1 && product2 && frequency >= 2) {
+      bundleRecommendations.push({
+        name: `${product1.title} + ${product2.title} Bundle`,
+        description: `Frequently bought together`,
+        mainProductId: productId1.replace('gid://shopify/Product/', ''),
+        bundledProducts: [
+          { id: productId1.replace('gid://shopify/Product/', ''), quantity: 1 },
+          { id: productId2.replace('gid://shopify/Product/', ''), quantity: 1 }
+        ],
+        discount: 10,
+        priority: frequency,
+        isAiGenerated: true
+      });
+    }
+  });
+
+  return bundleRecommendations;
+}
+
+async function generateBasicUpsellRecommendations(products, orders) {
+  const upsellRecommendations = [];
+  
+  const productsByType = products.reduce((acc, product) => {
+    const type = product.productType || 'General';
+    if (!acc[type]) acc[type] = [];
+    acc[type].push(product);
+    return acc;
+  }, {});
+
+  Object.entries(productsByType).forEach(([type, typeProducts]) => {
+    if (typeProducts.length < 2) return;
+    
+    const sortedProducts = typeProducts.sort((a, b) => {
+      const priceA = parseFloat(a.variants.edges[0]?.node.price || 0);
+      const priceB = parseFloat(b.variants.edges[0]?.node.price || 0);
+      return priceA - priceB;
+    });
+
+    for (let i = 0; i < sortedProducts.length - 1; i++) {
+      const triggerProduct = sortedProducts[i];
+      const upsellProduct = sortedProducts[i + 1];
+      
+      const triggerPrice = parseFloat(triggerProduct.variants.edges[0]?.node.price || 0);
+      const upsellPrice = parseFloat(upsellProduct.variants.edges[0]?.node.price || 0);
+      
+      const priceDifference = (upsellPrice - triggerPrice) / triggerPrice;
+      if (priceDifference >= 0.2 && priceDifference <= 2.0) {
+        upsellRecommendations.push({
+          name: `Upgrade to ${upsellProduct.title}`,
+          triggerProductId: triggerProduct.id.replace('gid://shopify/Product/', ''),
+          upsellProductId: upsellProduct.id.replace('gid://shopify/Product/', ''),
+          triggerType: 'cart',
+          discount: 5,
+          priority: Math.floor(priceDifference * 100),
+          isAiGenerated: true
+        });
+      }
+    }
+  });
+
+  return upsellRecommendations.slice(0, 10);
 }
