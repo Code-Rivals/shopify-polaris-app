@@ -1,4 +1,3 @@
-
 import prisma from "../db.server";
 import OpenAI from 'openai';
 
@@ -137,7 +136,7 @@ export async function generateAIRecommendations(shopDomain, admin) {
 
     // Generate AI-powered bundle recommendations
     const bundleRecommendations = await generateBundleRecommendations(products, orders);
-    
+
     // Generate AI-powered upsell recommendations
     const upsellRecommendations = await generateUpsellRecommendations(products, orders);
 
@@ -215,11 +214,11 @@ Return valid JSON array format only.
 
     try {
       const parsedBundles = JSON.parse(aiResponse);
-      
+
       bundleRecommendations = parsedBundles.map((bundle, index) => {
         const mainProductId = bundle.products[0];
         const bundledProducts = bundle.products.map(id => ({ id, quantity: 1 }));
-        
+
         return {
           name: bundle.name,
           description: bundle.description,
@@ -301,7 +300,7 @@ Return valid JSON array format only.
 
     try {
       const parsedUpsells = JSON.parse(aiResponse);
-      
+
       upsellRecommendations = parsedUpsells.map((upsell, index) => ({
         name: upsell.name,
         triggerProductId: upsell.triggerProductId,
@@ -386,10 +385,10 @@ export async function updateAnalytics(shopDomain, analyticsData) {
 // Fallback functions for when OpenAI is unavailable
 async function generateBasicBundleRecommendations(products, orders) {
   const productPairs = new Map();
-  
+
   orders.forEach(order => {
     const productIds = order.lineItems.edges.map(edge => edge.node.variant.product.id);
-    
+
     for (let i = 0; i < productIds.length; i++) {
       for (let j = i + 1; j < productIds.length; j++) {
         const pair = [productIds[i], productIds[j]].sort().join('|');
@@ -403,12 +402,12 @@ async function generateBasicBundleRecommendations(products, orders) {
     .slice(0, 5);
 
   const bundleRecommendations = [];
-  
+
   topPairs.forEach(([pair, frequency]) => {
     const [productId1, productId2] = pair.split('|');
     const product1 = products.find(p => p.id === productId1);
     const product2 = products.find(p => p.id === productId2);
-    
+
     if (product1 && product2 && frequency >= 2) {
       bundleRecommendations.push({
         name: `${product1.title} + ${product2.title} Bundle`,
@@ -430,7 +429,7 @@ async function generateBasicBundleRecommendations(products, orders) {
 
 async function generateBasicUpsellRecommendations(products, orders) {
   const upsellRecommendations = [];
-  
+
   const productsByType = products.reduce((acc, product) => {
     const type = product.productType || 'General';
     if (!acc[type]) acc[type] = [];
@@ -440,7 +439,7 @@ async function generateBasicUpsellRecommendations(products, orders) {
 
   Object.entries(productsByType).forEach(([type, typeProducts]) => {
     if (typeProducts.length < 2) return;
-    
+
     const sortedProducts = typeProducts.sort((a, b) => {
       const priceA = parseFloat(a.variants.edges[0]?.node.price || 0);
       const priceB = parseFloat(b.variants.edges[0]?.node.price || 0);
@@ -450,10 +449,10 @@ async function generateBasicUpsellRecommendations(products, orders) {
     for (let i = 0; i < sortedProducts.length - 1; i++) {
       const triggerProduct = sortedProducts[i];
       const upsellProduct = sortedProducts[i + 1];
-      
+
       const triggerPrice = parseFloat(triggerProduct.variants.edges[0]?.node.price || 0);
       const upsellPrice = parseFloat(upsellProduct.variants.edges[0]?.node.price || 0);
-      
+
       const priceDifference = (upsellPrice - triggerPrice) / triggerPrice;
       if (priceDifference >= 0.2 && priceDifference <= 2.0) {
         upsellRecommendations.push({
@@ -470,4 +469,54 @@ async function generateBasicUpsellRecommendations(products, orders) {
   });
 
   return upsellRecommendations.slice(0, 10);
+}
+
+export async function getRecentActivity(shopDomain) {
+  // In a real implementation, this would fetch actual activity data
+  // For now, return empty array to avoid mock data
+  return [];
+}
+
+export async function generateAIRecommendations(analytics, shopDomain) {
+  // AI recommendations based on actual store analytics
+  const recommendations = [];
+
+  // Analyze conversion rate
+  if (analytics.conversionRate < 2.0) {
+    recommendations.push("Consider optimizing your product pages to improve conversion rate");
+    recommendations.push("Add customer reviews and testimonials to build trust");
+  }
+
+  // Analyze average order value
+  if (analytics.averageOrderValue < 50) {
+    recommendations.push("Implement bundle offers to increase average order value");
+    recommendations.push("Add upsell suggestions at checkout");
+  }
+
+  // Analyze cart abandonment
+  if (analytics.cartAbandonmentRate > 70) {
+    recommendations.push("Send cart abandonment emails to recover lost sales");
+    recommendations.push("Simplify your checkout process to reduce abandonment");
+  }
+
+  // General recommendations based on store performance
+  if (analytics.totalRevenue < 1000) {
+    recommendations.push("Focus on driving more traffic through SEO and social media");
+    recommendations.push("Consider running targeted ad campaigns");
+  }
+
+  // If performance is good, suggest optimization
+  if (analytics.conversionRate > 3.0 && analytics.averageOrderValue > 75) {
+    recommendations.push("Your store is performing well! Consider expanding to new markets");
+    recommendations.push("Implement loyalty programs to retain customers");
+  }
+
+  // Default recommendations if no specific issues found
+  if (recommendations.length === 0) {
+    recommendations.push("Continue monitoring your analytics for optimization opportunities");
+    recommendations.push("Test different product descriptions and images");
+    recommendations.push("Consider seasonal promotions to boost sales");
+  }
+
+  return recommendations;
 }

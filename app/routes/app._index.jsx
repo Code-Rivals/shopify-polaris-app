@@ -1,4 +1,3 @@
-
 import { json } from "@remix-run/node";
 import { useLoaderData, useFetcher } from "@remix-run/react";
 import {
@@ -105,7 +104,7 @@ export default function Dashboard() {
                     {hasRecommendations ? "Active" : "Get Started"}
                   </Badge>
                 </InlineStack>
-                
+
                 {!hasRecommendations && !isGenerating && (
                   <Banner tone="info" title="Generate Your First AI Recommendations">
                     <Text>Let our AI analyze your store data and create personalized bundle and upsell recommendations to boost your AOV.</Text>
