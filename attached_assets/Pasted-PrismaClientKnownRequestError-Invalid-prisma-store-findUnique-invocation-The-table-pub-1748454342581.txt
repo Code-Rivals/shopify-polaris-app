@@ -1,0 +1,24 @@
+PrismaClientKnownRequestError: 
+Invalid `prisma.store.findUnique()` invocation:
+
+
+The table `public.Store` does not exist in the current database.
+    at zn.handleRequestError (D:\Office\Shopify\new-darren-app\node_modules\@prisma\client\runtime\library.js:121:7459)
+    at zn.handleAndLogRequestError (D:\Office\Shopify\new-darren-app\node_modules\@prisma\client\runtime\library.js:121:6784)
+    at zn.request (D:\Office\Shopify\new-darren-app\node_modules\@prisma\client\runtime\library.js:121:6491)
+    at l (D:\Office\Shopify\new-darren-app\node_modules\@prisma\client\runtime\library.js:130:9778)
+    at loader (D:\Office\Shopify\new-darren-app\app\routes\app.bundles.jsx:29:17)
+    at Object.callRouteLoader (D:\Office\Shopify\new-darren-app\node_modules\@remix-run\server-runtime\dist\data.js:59:16)
+    at D:\Office\Shopify\new-darren-app\node_modules\@remix-run\router\router.ts:4934:19
+    at callLoaderOrAction (D:\Office\Shopify\new-darren-app\node_modules\@remix-run\router\router.ts:4998:16)
+    at async Promise.all (index 0)
+    at defaultDataStrategy (D:\Office\Shopify\new-darren-app\node_modules\@remix-run\router\router.ts:4807:17)
+    at callDataStrategyImpl (D:\Office\Shopify\new-darren-app\node_modules\@remix-run\router\router.ts:4870:17)
+    at callDataStrategy (D:\Office\Shopify\new-darren-app\node_modules\@remix-run\router\router.ts:4027:19)
+    at loadRouteData (D:\Office\Shopify\new-darren-app\node_modules\@remix-run\router\router.ts:3972:19)
+    at queryImpl (D:\Office\Shopify\new-darren-app\node_modules\@remix-run\router\router.ts:3731:20)
+    at Object.queryRoute (D:\Office\Shopify\new-darren-app\node_modules\@remix-run\router\router.ts:3664:18)
+    at handleDataRequest (D:\Office\Shopify\new-darren-app\node_modules\@remix-run\server-runtime\dist\server.js:234:20)
+    at requestHandler (D:\Office\Shopify\new-darren-app\node_modules\@remix-run\server-runtime\dist\server.js:128:18)
+    at nodeHandler (D:\Office\Shopify\new-darren-app\node_modules\@remix-run\dev\dist\vite\plugin.js:859:27)
+    at D:\Office\Shopify\new-darren-app\node_modules\@remix-run\dev\dist\vite\plugin.js:862:15
